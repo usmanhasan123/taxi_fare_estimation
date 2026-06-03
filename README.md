@@ -200,6 +200,8 @@ Contains all experiment artifacts, including:
 
 ---
 
+**Note: When running multiple experiments, the Jupyter kernel should be restarted before executing train_and_test_model.ipynb again.**
+
 ## Typical Workflow
 
 1. Configure parameters in `config.env`.
