@@ -1,0 +1,6 @@
+pandas
+datetime
+sklearn
+scipy
+python-dotenv
+joblib

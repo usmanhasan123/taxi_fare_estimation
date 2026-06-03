@@ -1,0 +1,15 @@
+features,type
+trip_distance,num
+passenger_count,num
+trip_duration_min,num
+pickup_hour,num
+avg_speed_miles_per_min,num
+fare_amount,num
+tpep_pickup_datetime,cat
+tpep_dropoff_datetime,cat
+PULocationID,cat
+DOLocationID,cat
+RatecodeID,cat
+payment_type,cat
+dow,cat
+is_weekend,cat

@@ -1,0 +1,18 @@
+{
+    "cross_validation": true,
+    "model": "xgb",
+    "best_hyperparameters": {
+        "model__learning_rate": 0.01,
+        "model__n_estimators": 500
+    },
+    "training_metrics": {
+        "MAE": 0.7287358045578003,
+        "MSE": 3.7665646076202393,
+        "RMSE": 1.9407639503479004
+    },
+    "test_metrics": {
+        "MAE": 0.8395013213157654,
+        "MSE": 8.019594192504883,
+        "RMSE": 2.8318889141082764
+    }
+}
