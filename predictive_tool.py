@@ -182,7 +182,7 @@ class fare_prediction_class:
         os.makedirs(experiment_folder, exist_ok=True)
         model_path = os.path.join(experiment_folder, "model.pkl")
         with open (model_path, 'wb') as f:
-            pickle.dump(model_pipe, f)
+            pickle.dump(grid, f)
 
         metrics_path = os.path.join(experiment_folder, "metrics.json")
         with open (metrics_path, 'w') as f:
