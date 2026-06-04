@@ -236,7 +236,7 @@ class fare_prediction_class:
 
         preds=model.predict(pred_data)
         pred_data['predictions']=preds
-        pred_data.to_csv(os.path.join(self.root_dir, 'ride_level_predictions.csv'))
+        pred_data[['id', 'predictions']].to_csv(os.path.join(self.root_dir, 'ride_level_predictions.csv'))
         
         
         
