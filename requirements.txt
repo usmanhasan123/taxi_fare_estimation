@@ -1,6 +1,8 @@
 pandas
-datetime
 scikit-learn
 scipy
 python-dotenv
 joblib
+jupyter
+xgboost
+matplotlib
