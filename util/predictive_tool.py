@@ -15,6 +15,8 @@ import pickle
 import json
 import ast
 from pathlib import Path
+import mlflow
+import mlflow.sklearn
 
 class fare_prediction_class:
     def __init__(self):
@@ -113,94 +115,127 @@ class fare_prediction_class:
         )
         return x_train, x_test, y_train, y_test
 
-    def model_training_without_cv(self, model_pipe, model_algo, x_train, x_test, y_train, y_test):
-        model_pipe.fit(x_train, y_train)
-
-        y_pred_train=model_pipe.predict(x_train)
-        y_pred_test=model_pipe.predict(x_test)
-
-        train=pd.DataFrame()
-        train['y_test']=y_train
-        train['y_pred']=y_pred_train
-        mae_train=mean_absolute_error(y_train, y_pred_train)
-        mse_train=mean_squared_error(y_train, y_pred_train)
-        rmse_train=root_mean_squared_error(y_train, y_pred_train)
-
-        test=pd.DataFrame()
-        test['y_test']=y_test
-        test['y_pred']=y_pred_test
-        mae_test=mean_absolute_error(y_test, y_pred_test)
-        mse_test=mean_squared_error(y_test, y_pred_test)
-        rmse_test=root_mean_squared_error(y_test, y_pred_test)
-
-        metrics={'model': model_algo, 'training_metrics': {'MAE': mae_train, 'MSE': mse_train, 'RMSE': rmse_train}, 'test_metrics': {'MAE': mae_test, 'MSE': mse_test, 'RMSE': rmse_test}}
-
+    def model_training_without_cv(self, model_pipe, model_algo, x_train, x_test, y_train, y_test, params_used):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        experiment_folder = os.path.join(self.root_dir,'model_exp', f"experiment_{timestamp}")
-        os.makedirs(experiment_folder, exist_ok=True)
-        model_path = os.path.join(experiment_folder, "model.pkl")
-        with open (model_path, 'wb') as f:
-            pickle.dump(model_pipe, f)
+        with mlflow.start_run(run_name=f"experiment_{timestamp}"): 
+            model_pipe.fit(x_train, y_train)
+    
+            y_pred_train=model_pipe.predict(x_train)
+            y_pred_test=model_pipe.predict(x_test)
+    
+            train=pd.DataFrame()
+            train['y_test']=y_train
+            train['y_pred']=y_pred_train
+            mae_train=mean_absolute_error(y_train, y_pred_train)
+            mse_train=mean_squared_error(y_train, y_pred_train)
+            rmse_train=root_mean_squared_error(y_train, y_pred_train)
+    
+            test=pd.DataFrame()
+            test['y_test']=y_test
+            test['y_pred']=y_pred_test
+            mae_test=mean_absolute_error(y_test, y_pred_test)
+            mse_test=mean_squared_error(y_test, y_pred_test)
+            rmse_test=root_mean_squared_error(y_test, y_pred_test)
+    
+            metrics={'training_MAE': mae_train, 'training_MSE': mse_train, 'training_RMSE': rmse_train, 'test_MAE': mae_test, 'test_MSE': mse_test, 'test_RMSE': rmse_test}
 
-        metrics_path = os.path.join(experiment_folder, "metrics.json")
-        with open (metrics_path, 'w') as f:
-            json.dump(metrics, f, indent=4)
+            mlflow.log_params(params_used)
+            mlflow.log_metrics(metrics)
+            model_info=mlflow.sklearn.log_model(sk_model=model_pipe, name='model')
 
-    def model_training_with_cv(self, model_pipe, model_algo, x_train, x_test, y_train, y_test):
-        if os.getenv('params')!=None:
-            params=ast.literal_eval(os.getenv('params'))
-        else:
-            params={}
-        folds=int(os.getenv('folds'))
-        grid = GridSearchCV(
-            estimator=model_pipe,
-            param_grid=params,
-            cv=folds,
-            scoring="neg_root_mean_squared_error",
-            n_jobs=-1
-        )
+            print("Run ID:", mlflow.active_run().info.run_id)
+            print("Model URI:", model_info.model_uri)
+    
+            # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            # experiment_folder = os.path.join(self.root_dir,'model_exp', f"experiment_{timestamp}")
+            # os.makedirs(experiment_folder, exist_ok=True)
+            # model_path = os.path.join(experiment_folder, "model.pkl")
+            # with open (model_path, 'wb') as f:
+            #     pickle.dump(model_pipe, f)
+    
+            # metrics_path = os.path.join(experiment_folder, "metrics.json")
+            # with open (metrics_path, 'w') as f:
+            #     json.dump(metrics, f, indent=4)
 
-        grid.fit(x_train, y_train)
-
-        y_pred_train=grid.predict(x_train)
-        y_pred_test=grid.predict(x_test)
-
-        train=pd.DataFrame()
-        train['y_test']=y_train
-        train['y_pred']=y_pred_train
-        mae_train=mean_absolute_error(y_train, y_pred_train)
-        mse_train=mean_squared_error(y_train, y_pred_train)
-        rmse_train=root_mean_squared_error(y_train, y_pred_train)
-
-        test=pd.DataFrame()
-        test['y_test']=y_test
-        test['y_pred']=y_pred_test
-        mae_test=mean_absolute_error(y_test, y_pred_test)
-        mse_test=mean_squared_error(y_test, y_pred_test)
-        rmse_test=root_mean_squared_error(y_test, y_pred_test)
-
-        metrics={'cross_validation': True, 'model': model_algo, 'best_hyperparameters': grid.best_params_, 'training_metrics': {'MAE': mae_train, 'MSE': mse_train, 'RMSE': rmse_train}, 'test_metrics': {'MAE': mae_test, 'MSE': mse_test, 'RMSE': rmse_test}}
-
+    def model_training_with_cv(self, model_pipe, model_algo, x_train, x_test, y_train, y_test, params_used):
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        os.makedirs(experiment_folder, exist_ok=True)
-        model_path = os.path.join(experiment_folder, "model.pkl")
-        with open (model_path, 'wb') as f:
-            pickle.dump(grid, f)
+        with mlflow.start_run(run_name=f"experiment_{timestamp}"):    
+            # if os.getenv('params')!=None:
+            #     params=ast.literal_eval(os.getenv('params'))
+            # else:
+            #     params={}
+            folds=int(os.getenv('folds'))
+            grid = GridSearchCV(
+                estimator=model_pipe,
+                param_grid=params_used,
+                cv=folds,
+                scoring="neg_root_mean_squared_error",
+                n_jobs=-1
+            )
+    
+            grid.fit(x_train, y_train)
+    
+            y_pred_train=grid.predict(x_train)
+            y_pred_test=grid.predict(x_test)
+    
+            train=pd.DataFrame()
+            train['y_test']=y_train
+            train['y_pred']=y_pred_train
+            mae_train=mean_absolute_error(y_train, y_pred_train)
+            mse_train=mean_squared_error(y_train, y_pred_train)
+            rmse_train=root_mean_squared_error(y_train, y_pred_train)
+    
+            test=pd.DataFrame()
+            test['y_test']=y_test
+            test['y_pred']=y_pred_test
+            mae_test=mean_absolute_error(y_test, y_pred_test)
+            mse_test=mean_squared_error(y_test, y_pred_test)
+            rmse_test=root_mean_squared_error(y_test, y_pred_test)
+    
+            metrics={'training_MAE':mae_train, 'training_MSE':mse_train, 'training_RMSE':rmse_train, 'test_MAE':mae_test, 'test_MSE':mse_test, 'test_RMSE':rmse_test}
 
-        metrics_path = os.path.join(experiment_folder, "metrics.json")
-        with open (metrics_path, 'w') as f:
-            json.dump(metrics, f, indent=4)
+            best_hyperparameters={'best_hyperparameters': grid.best_params_}
+
+            mlflow.log_params(params_used)
+            mlflow.log_params(best_hyperparameters)
+            mlflow.log_metrics(metrics)
+            model_info=mlflow.sklearn.log_model(sk_model=grid, name='model')
+
+            print("Run ID:", mlflow.active_run().info.run_id)
+            print("Model URI:", model_info.model_uri)
+            
+    
+            
+            # experiment_folder = os.path.join(self.root_dir,'model_exp', f"experiment_{timestamp}")
+            # os.makedirs(experiment_folder, exist_ok=True)
+            # model_path = os.path.join(experiment_folder, "model.pkl")
+            # with open (model_path, 'wb') as f:
+            #     pickle.dump(grid, f)
+    
+            # metrics_path = os.path.join(experiment_folder, "metrics.json")
+            # with open (metrics_path, 'w') as f:
+            #     json.dump(metrics, f, indent=4)
 
 
     def model_training(self):
+        mlflow.set_tracking_uri("http://127.0.0.1:5000")
+        mlflow.set_experiment("taxi-fare-prediction")
+        model_algo=os.getenv('model')
+        
         x_train, x_test, y_train, y_test=self.train_test_split()
         scaler_dict={'standard':StandardScaler(), 'minmax':MinMaxScaler()}
         encoder_dict={'onehot':OneHotEncoder(handle_unknown="ignore"), 'label':LabelEncoder()}
+
+        if model_algo=='xgb':
+            params_used={'n_estimators':int(os.getenv('n_estimators')), 'learning_rate': float(os.getenv('learning_rate')), 'reg_lambda':int(os.getenv('reg_lambda')), 'objective':"reg:squarederror"}
+        else:
+            params_used={}
+            
         model_dict={'linear_regression': LinearRegression(), 
                     'xgb': XGBRegressor(
-                                        n_estimators=int(os.getenv('n_estimators')),
-                                        learning_rate=float(os.getenv('learning_rate')),
-                                        reg_lambda=int(os.getenv('reg_lambda')),
+                                        n_estimators=params_used['n_estimators'],
+                                        learning_rate=params_used['learning_rate'],
+                                        reg_lambda=params_used['reg_lambda'],
                                         objective="reg:squarederror"
                                     )}
         feature_store_path=os.path.join(self.root_dir,'data/feature_store/', 'feature_store.csv')
@@ -214,7 +249,7 @@ class fare_prediction_class:
 
         scaler=os.getenv('scaler')
         encoder=os.getenv('encoder')
-        model_algo=os.getenv('model')
+        # model_algo=os.getenv('model')
 
         preprocessor = ColumnTransformer([
             ("num", scaler_dict[scaler], num_cols),
@@ -226,9 +261,13 @@ class fare_prediction_class:
                             ('model', model)])
 
         if os.getenv('cross_validation')=='False':
-            self.model_training_without_cv(model_pipe, model_algo, x_train, x_test, y_train, y_test)
+            self.model_training_without_cv(model_pipe, model_algo, x_train, x_test, y_train, y_test, params_used)
         else:
-            self.model_training_with_cv(model_pipe, model_algo, x_train, x_test, y_train, y_test)
+            if model_algo=='xgb':
+                params_used_cv=ast.literal_eval(os.getenv('params'))
+            else:
+                params_used_cv={}
+            self.model_training_with_cv(model_pipe, model_algo, x_train, x_test, y_train, y_test, params_used_cv)
 
     def predict(self, n):
         model=joblib.load(os.path.join(root_dir, 'model_exp/experiment_20260926_214935/model.pkl'))
@@ -244,6 +283,24 @@ class fare_prediction_class:
         x=pred_data[pred_data['id']==n]
         preds=model.predict(x)
         return preds
+
+    def deploy(run_id):
+        experiment = mlflow.get_experiment_by_name(
+            "taxi-fare-prediction"
+        )
+        
+        logged_models = mlflow.search_logged_models(
+            experiment_ids=[experiment.experiment_id],
+            filter_string=f"source_run_id = {run_id}"
+        )
+        
+        model_uri = f"models:/{logged_models.model_id[0]}"
+        
+        model = mlflow.sklearn.load_model(model_uri)
+
+        model_path = os.path.join(root,"app", "model.pkl")
+        with open (model_path, 'wb') as f:
+            pickle.dump(model, f)
 
     # def predictions(self):
     #     pred_data=self.feature_engineering('prediction_set')

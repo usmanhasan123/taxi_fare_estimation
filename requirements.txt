@@ -8,3 +8,4 @@ xgboost
 matplotlib
 uvicorn
 fastapi
+mlflow

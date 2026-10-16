@@ -5,13 +5,13 @@ import pandas as pd
 import ast
 from dotenv import load_dotenv
 
-root_dir=Path(__file__).resolve().parent.parent
-model=joblib.load(os.path.join(root_dir, 'model_exp/experiment_20260926_214935/model.pkl'))
+root_dir=Path(__file__).resolve().parent
+model=joblib.load(os.path.join(root_dir, 'model.pkl'))
 
-load_dotenv(os.path.join(root_dir, 'app/config_prod.env'))
+load_dotenv(os.path.join(root_dir, 'config_prod.env'))
 
 def read_and_transform_data():
-    pred_data_path=os.path.join(root_dir, 'app/prediction_set.csv')
+    pred_data_path=os.path.join(root_dir, 'prediction_set.csv')
     pred_data=pd.read_csv(pred_data_path)
 
     pred_data['tpep_pickup_datetime']=pd.to_datetime(pred_data['tpep_pickup_datetime'])
@@ -45,7 +45,7 @@ def feature_engineering():
 
 def predict(n):
     pred_data=feature_engineering()
-    feature_store_path=os.path.join(root_dir, 'app/feature_store.csv')
+    feature_store_path=os.path.join(root_dir, 'feature_store.csv')
     features_df=pd.read_csv(feature_store_path)
     features=features_df['features'].to_list()
     if os.getenv('target_col') in features:
