@@ -14,15 +14,18 @@ import os
 import pickle
 import json
 import ast
+from pathlib import Path
 
 class fare_prediction_class:
-    def __init__(self, path='./config.env'):
-        load_dotenv(path)
-        self.root_dir=os.getenv('root_dir')
+    def __init__(self):
+        self.root_dir=Path(__file__).resolve().parent.parent
+        load_dotenv(os.path.join(self.root_dir, 'config.env'))
+        print(self.root_dir)
+        # self.root_dir=os.getenv('root_dir')
 
     def eda(self, col):
         # col=os.getenv('eda_col')
-        train_data_path=os.path.join(self.root_dir, 'training.csv')
+        train_data_path=os.path.join(self.root_dir, 'data/raw/training.csv')
         train_data=pd.read_csv(train_data_path)
         print(train_data[col].describe())
         print(train_data[col].hist())
@@ -32,7 +35,7 @@ class fare_prediction_class:
             file='training.csv'
         else:
             file='prediction_set.csv'
-        train_data_path=os.path.join(self.root_dir, file)
+        train_data_path=os.path.join(self.root_dir, 'data/raw/', file)
         train_data=pd.read_csv(train_data_path)
 
         train_data['tpep_pickup_datetime']=pd.to_datetime(train_data['tpep_pickup_datetime'])
@@ -62,13 +65,14 @@ class fare_prediction_class:
             if i not in cols_to_exclude:
                 to_keep.append(i)
         train_data=train_data.loc[:,to_keep]
-        feature_eng_path=os.path.join(self.root_dir, f'{data}_feature_engineered_data.csv')
-        train_data.to_csv(feature_eng_path)
+        if data=='train_set':
+            feature_eng_path=os.path.join(self.root_dir,'data/processed/', f'{data}_feature_engineered_data.csv')
+            train_data.to_csv(feature_eng_path)
         return train_data
 
     def corr(self):
-        feature_eng_path=os.path.join(self.root_dir, 'train_set_feature_engineered_data.csv')
-        feature_store_path=os.path.join(self.root_dir, 'feature_store.csv')
+        feature_eng_path=os.path.join(self.root_dir,'data/processed/', 'train_set_feature_engineered_data.csv')
+        feature_store_path=os.path.join(self.root_dir,'data/feature_store/', 'feature_store.csv')
         train_data=pd.read_csv(feature_eng_path)
         features_df=pd.read_csv(feature_store_path)
         # features=features_df['features'].to_list()
@@ -90,8 +94,8 @@ class fare_prediction_class:
     def train_test_split(self):
         target_col=os.getenv('target_col')
         test_split=float(os.getenv('test_split'))
-        feature_eng_path=os.path.join(self.root_dir, 'train_set_feature_engineered_data.csv')
-        feature_store_path=os.path.join(self.root_dir, 'feature_store.csv')
+        feature_eng_path=os.path.join(self.root_dir,'data/processed/', 'train_set_feature_engineered_data.csv')
+        feature_store_path=os.path.join(self.root_dir,'data/feature_store/', 'feature_store.csv')
         train_data=pd.read_csv(feature_eng_path)
         features_df=pd.read_csv(feature_store_path)
         features=features_df['features'].to_list()
@@ -178,7 +182,6 @@ class fare_prediction_class:
         metrics={'cross_validation': True, 'model': model_algo, 'best_hyperparameters': grid.best_params_, 'training_metrics': {'MAE': mae_train, 'MSE': mse_train, 'RMSE': rmse_train}, 'test_metrics': {'MAE': mae_test, 'MSE': mse_test, 'RMSE': rmse_test}}
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        experiment_folder = os.path.join(self.root_dir,'model_exp', f"experiment_{timestamp}")
         os.makedirs(experiment_folder, exist_ok=True)
         model_path = os.path.join(experiment_folder, "model.pkl")
         with open (model_path, 'wb') as f:
@@ -200,7 +203,7 @@ class fare_prediction_class:
                                         reg_lambda=int(os.getenv('reg_lambda')),
                                         objective="reg:squarederror"
                                     )}
-        feature_store_path=os.path.join(self.root_dir, 'feature_store.csv')
+        feature_store_path=os.path.join(self.root_dir,'data/feature_store/', 'feature_store.csv')
         features_df=pd.read_csv(feature_store_path)
 
         num_cols=features_df[features_df['type']=='num']['features'].to_list()
@@ -227,16 +230,31 @@ class fare_prediction_class:
         else:
             self.model_training_with_cv(model_pipe, model_algo, x_train, x_test, y_train, y_test)
 
-    def predictions(self):
-        pred_data=self.feature_engineering('prediction_set')
-        model_exp=os.getenv('model_exp_for_pred')
-        model_path=os.path.join(self.root_dir, 'model_exp', model_exp, 'model.pkl')
-        with open(model_path, 'rb') as f:
-            model=pickle.load(f)
+    def predict(self, n):
+        model=joblib.load(os.path.join(root_dir, 'model_exp/experiment_20260926_214935/model.pkl'))
+        pred_data=class_obj.feature_engineering('prediction_set')
+        feature_store_path=os.path.join(root_dir,'data/feature_store/', 'feature_store.csv')
+        features_df=pd.read_csv(feature_store_path)
+        features=features_df['features'].to_list()
+        if 'fare_amount' in features:
+            features.remove('fare_amount')
+        if 'id' not in features:
+            features.append('id')
+        pred_data=pred_data[features]
+        x=pred_data[pred_data['id']==n]
+        preds=model.predict(x)
+        return preds
 
-        preds=model.predict(pred_data)
-        pred_data['predictions']=preds
-        pred_data[['id', 'predictions']].to_csv(os.path.join(self.root_dir, 'ride_level_predictions.csv'))
+    # def predictions(self):
+    #     pred_data=self.feature_engineering('prediction_set')
+    #     model_exp=os.getenv('model_exp_for_pred')
+    #     model_path=os.path.join(self.root_dir, 'model_exp', model_exp, 'model.pkl')
+    #     with open(model_path, 'rb') as f:
+    #         model=pickle.load(f)
+
+    #     preds=model.predict(pred_data)
+    #     pred_data['predictions']=preds
+    #     pred_data[['id', 'predictions']].to_csv(os.path.join(self.root_dir,'data/processed/', 'ride_level_predictions.csv'))
         
         
         

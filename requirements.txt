@@ -1,6 +1,11 @@
 pandas
-datetime
-scikit-learn
+scikit-learn==1.5.2
 scipy
 python-dotenv
 joblib
+jupyter
+xgboost
+matplotlib
+uvicorn
+fastapi
+mlflow
