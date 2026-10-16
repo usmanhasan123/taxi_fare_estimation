@@ -19,7 +19,7 @@
 import streamlit as st
 from inference import predict
 
-st.title("Model Prediction App")
+st.title("Fare Prediction App")
 
 # Health/status message
 st.success("App is running")
