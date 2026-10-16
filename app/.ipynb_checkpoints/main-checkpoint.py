@@ -17,7 +17,7 @@
 #     return {"prediction": prediction}
 
 import streamlit as st
-from app.inference import predict
+from inference import predict
 
 st.title("Model Prediction App")
 
