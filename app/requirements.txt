@@ -1,6 +1,6 @@
 fastapi
 uvicorn
-scikit-learn
+scikit-learn==1.5.2
 joblib
 pandas
 python-dotenv

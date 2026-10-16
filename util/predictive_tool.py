@@ -233,9 +233,9 @@ class fare_prediction_class:
             
         model_dict={'linear_regression': LinearRegression(), 
                     'xgb': XGBRegressor(
-                                        n_estimators=params_used['n_estimators'],
-                                        learning_rate=params_used['learning_rate'],
-                                        reg_lambda=params_used['reg_lambda'],
+                                        n_estimators=int(os.getenv('n_estimators')),
+                                        learning_rate=float(os.getenv('learning_rate')),
+                                        reg_lambda=int(os.getenv('reg_lambda')),
                                         objective="reg:squarederror"
                                     )}
         feature_store_path=os.path.join(self.root_dir,'data/feature_store/', 'feature_store.csv')
@@ -284,21 +284,21 @@ class fare_prediction_class:
         preds=model.predict(x)
         return preds
 
-    def deploy(run_id):
+    def deploy(self, run_id):
         experiment = mlflow.get_experiment_by_name(
             "taxi-fare-prediction"
         )
         
         logged_models = mlflow.search_logged_models(
             experiment_ids=[experiment.experiment_id],
-            filter_string=f"source_run_id = {run_id}"
+            filter_string=f"source_run_id = '{run_id}'"
         )
         
         model_uri = f"models:/{logged_models.model_id[0]}"
         
         model = mlflow.sklearn.load_model(model_uri)
 
-        model_path = os.path.join(root,"app", "model.pkl")
+        model_path = os.path.join(self.root_dir,"app", "model.pkl")
         with open (model_path, 'wb') as f:
             pickle.dump(model, f)
 
