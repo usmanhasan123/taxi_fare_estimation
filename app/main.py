@@ -1,17 +1,38 @@
-from fastapi import FastAPI
+# from fastapi import FastAPI
+# from app.inference import predict
+
+# print("Loaded main.py")
+# print(__file__)
+
+# app = FastAPI()
+
+# @app.get("/")
+# def health_check():
+#     return {"status": "ok"}
+
+
+# @app.post("/predict")
+# def prediction(request: int):
+#     prediction = predict(request)
+#     return {"prediction": prediction}
+
+import streamlit as st
 from app.inference import predict
 
-print("Loaded main.py")
-print(__file__)
+st.title("Model Prediction App")
 
-app = FastAPI()
+# Health/status message
+st.success("App is running")
 
-@app.get("/")
-def health_check():
-    return {"status": "ok"}
+# User input
+request = st.number_input(
+    "Enter input value",
+    min_value=0,
+    step=1
+)
 
+# Prediction
+if st.button("Predict"):
+    prediction = predict(int(request))
 
-@app.post("/predict")
-def prediction(request: int):
-    prediction = predict(request)
-    return {"prediction": prediction}
+    st.write("Prediction:", prediction)
