@@ -182,7 +182,6 @@ class fare_prediction_class:
         metrics={'cross_validation': True, 'model': model_algo, 'best_hyperparameters': grid.best_params_, 'training_metrics': {'MAE': mae_train, 'MSE': mse_train, 'RMSE': rmse_train}, 'test_metrics': {'MAE': mae_test, 'MSE': mse_test, 'RMSE': rmse_test}}
 
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        experiment_folder = os.path.join(self.root_dir,'model_exp', f"experiment_{timestamp}")
         os.makedirs(experiment_folder, exist_ok=True)
         model_path = os.path.join(experiment_folder, "model.pkl")
         with open (model_path, 'wb') as f:

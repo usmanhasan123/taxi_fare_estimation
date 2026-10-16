@@ -6,3 +6,5 @@ joblib
 jupyter
 xgboost
 matplotlib
+uvicorn
+fastapi
