@@ -55,4 +55,5 @@ def predict(n):
     pred_data=pred_data[features]
     x=pred_data[pred_data['id']==n]
     preds=model.predict(x)
+    print(preds)
     return float(preds[0])
