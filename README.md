@@ -1,213 +1,103 @@
 # Taxi Fare Estimation
 
-This repository provides a complete workflow for training taxi fare prediction models, tracking experiments, and generating fare predictions on new data.
+Train taxi fare prediction models, track experiments with MLflow, and test a selected model through FastAPI.
 
-## Getting Started
+## 1. Set up the project
 
-### 1. Clone the Repository
-
-Clone the repository to your local machine:
+Clone the repository and enter the project directory:
 
 ```bash
 git clone https://github.com/usmanhasan123/taxi_fare_estimation.git
+cd taxi_fare_estimation
 ```
 
-This project was primarily developed using Jupyter Notebooks, but you may use any Python development environment of your choice.
+Choose an environment:
 
----
+- **Docker:** run `docker compose up` from the project root. Service settings are defined in the Compose file.
+- **Local Python:** install the dependencies:
 
-## Repository Structure
+  ```bash
+  pip install -r requirements.txt
+  ```
 
-After cloning the repository, you will find the following files and folders:
+The main workflow uses Jupyter notebooks, but you can use another Python development environment.
 
-### Data Files
+## 2. Configure training
 
-#### `training.csv`
+Review these files before training:
 
-Dataset used for model training and evaluation.
+| File | Purpose |
+| --- | --- |
+| `data/raw/training.csv` | Raw training and evaluation data. |
+| `data/feature_store/feature_store.csv` | List of engineered features used for training. Remove entries to exclude features. |
+| `config.env` | Model selection, hyperparameters, cross-validation, feature exclusions, and experiment/prediction settings. |
 
-#### `prediction_set.csv`
+Supported model choices include Linear Regression and XGBoost. Review features such as `tip_amount` and `tolls_amount`: exclude them if they would be unavailable at prediction time to avoid data leakage.
 
-Dataset on which trained models generate fare predictions.
+## 3. Start MLflow
 
-#### `feature_store.csv`
-
-Contains all engineered features used during model training.
-
-Users can remove features from this file if they do not want them to be included in the training process.
-
----
-
-### Configuration Files
-
-#### `requirements.txt`
-
-Lists all Python packages required to run the project.
-
-#### `config.env`
-
-Contains user-defined configurations and model parameters, including:
-
-* Model selection
-* Hyperparameter settings
-* Cross-validation settings
-* Feature exclusion settings
-* Experiment selection for prediction generation
-
----
-
-### Code Files
-
-#### `predictive_tool.py`
-
-Core utility module that:
-
-* Reads configurations from `config.env`
-* Performs feature engineering
-* Trains machine learning models
-* Generates predictions
-* Tracks experiment results
-
-This module is designed to make the workflow reusable, scalable, and easier to maintain.
-
-#### `train_and_test_model.ipynb`
-
-Main notebook used to:
-
-* Train models
-* Evaluate performance
-* Track experiments
-* Generate predictions
-
-#### `adhoc_training.ipynb`
-
-A sandbox notebook for experimentation, debugging, and custom analyses.
-
-Users can freely modify this notebook without affecting the main training workflow.
-
----
-
-### Experiment Tracking
-
-#### `model_exp/`
-
-Stores all experiment runs.
-
-For each experiment, the repository saves:
-
-* Trained model artifacts
-* Evaluation metrics
-* Experiment configurations
-
-Each training run automatically creates a new experiment folder inside `model_exp`.
-
-The repository may already contain experiment folders from previous runs for reference.
-
----
-
-## Installation
-
-Open `train_and_test_model.ipynb`.
-
-Run the cell containing:
+From the project root, start the tracking server in a separate terminal and leave it running:
 
 ```bash
-pip install -r requirements.txt
+mlflow server --host 127.0.0.1 --port 5000
 ```
 
-This step only needs to be performed once.
+Open [MLflow](http://localhost:5000/) to compare runs. Each training execution creates a new run within the configured experiment.
 
----
+## 4. Train and evaluate
 
-## Training a Model
+Open `notebooks/train_and_test_model.ipynb` and run all cells **except the final cell**. The workflow:
 
-1. Open `train_and_test_model.ipynb`.
-2. Review and modify configurations in `config.env` as needed.
-3. Run all notebook cells **except the final cell**.
+1. Engineers features and creates `data/processed/train_set_feature_engineered_data.csv`.
+2. Trains the model selected in `config.env`.
+3. Evaluates performance and logs the model, parameters, and metrics to MLflow.
 
-During training, the workflow will:
+**Restart the Jupyter kernel before rerunning the training notebook for another experiment.**
 
-* Perform feature engineering
-* Create `train_set_feature_engineered_data.csv`
-* Train the selected model
-* Evaluate model performance
-* Save evaluation metrics (MAE, MSE, and RMSE)
-* Store trained models and experiment artifacts in `model_exp`
+## 5. Select and export a model
 
-Each training run generates a new experiment folder inside `model_exp`.
+1. Compare the runs in MLflow and choose the model you want to use.
+2. Copy its run ID from MLflow, or retrieve it with `mlflow.search_runs()`.
+3. Enter the run ID in the final cell of `train_and_test_model.ipynb`.
+4. Run that cell to export the selected model to the `app/` directory for inference.
 
-### Configurable Options
+## 6. Test the model with FastAPI
 
-The `config.env` file allows you to customize:
+From the project root, run:
 
-* Model type (e.g., Linear Regression, XGBoost)
-* Hyperparameters
-* Cross-validation settings
-* Features to exclude from training
-* Experiment selection for prediction generation
-
-You may also exclude columns such as `tip_amount` and `tolls_amount` since these may introduce data leakage because they are often unavailable when predicting fares before a trip is completed.
-
----
-
-## Generating Predictions
-
-After reviewing experiment results and selecting your preferred model:
-
-1. Identify the corresponding experiment folder inside `model_exp`.
-2. Copy the experiment folder name.
-3. Update the `model_exp_for_pred` parameter in `config.env` with that experiment name.
-
-Example:
-
-```text
-model_exp_for_pred=experiment_20260115_103000
+```bash
+uvicorn app.main:app --host 0.0.0.0 --port 8000
 ```
 
-4. Return to `train_and_test_model.ipynb`.
-5. Run the final notebook cell.
+Open [the interactive API docs](http://localhost:8000/docs), enter the required request values, and execute a prediction.
 
-The prediction workflow will:
+The inference script looks up the relevant data, applies transformations, and uses the exported model to predict the fare.
 
-* Generate `prediction_set_feature_engineered_data.csv`
-* Load the selected trained model
-* Generate fare predictions for each trip
-* Create `ride_level_predictions.csv`
+## Project files
 
----
+### Development
 
-## Output Files
+| File | Purpose |
+| --- | --- |
+| `requirements.txt` | Development dependencies. |
+| `util/predictive_tool.py` | Configuration loading, feature engineering, training, MLflow tracking, and model export. |
+| `notebooks/train_and_test_model.ipynb` | Main training, evaluation, prediction, and model-export workflow. |
+| `notebooks/adhoc_training.ipynb` | Sandbox for experiments, debugging, and custom analysis. |
+| `notebooks/inference_testing.ipynb` | Tests the inference code used at runtime. |
 
-### `train_set_feature_engineered_data.csv`
+### Application
 
-Feature-engineered version of the training dataset.
+| File | Purpose |
+| --- | --- |
+| `app/config_prod.env` | Inference settings, including excluded columns, the target column, and the lookup ID. |
+| `app/feature_store.csv` | Features used for prediction. |
+| `app/prediction_set.csv` | Lookup data used to retrieve features for prediction. |
+| `app/requirements.txt` | Application dependencies. |
+| `app/model.pkl` | Exported model used for inference. |
+| `app/inference.py` | Request processing, data lookup, transformations, and prediction. |
+| `app/main.py` | FastAPI application entry point. |
 
-### `prediction_set_feature_engineered_data.csv`
+## Streamlit version
 
-Feature-engineered version of the prediction dataset.
-
-### `ride_level_predictions.csv`
-
-Contains predicted fare amounts for every ride in `prediction_set.csv`.
-
-### `model_exp/`
-
-Contains all experiment artifacts, including:
-
-* Trained models
-* Metrics (MAE, MSE, RMSE)
-* Experiment configurations
-
----
-
-**Note: When running multiple experiments, the Jupyter kernel should be restarted before executing train_and_test_model.ipynb again.**
-
-## Typical Workflow
-
-1. Configure parameters in `config.env`.
-2. Run training cells in `train_and_test_model.ipynb`.
-3. Review experiment metrics in `model_exp`.
-4. Select the best-performing experiment.
-5. Update `model_exp_for_pred` in `config.env`.
-6. Run the prediction cell.
-7. Review results in `ride_level_predictions.csv`.
+A separate Streamlit application also demonstrates this workflow. It accepts an integer ride ID, retrieves the corresponding ride data, and predicts the fare.
+**https://taxifareestimation-sgwcuhjlypdv4n8vdcvzi6.streamlit.app/**
